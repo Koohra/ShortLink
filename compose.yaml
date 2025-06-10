@@ -1,0 +1,83 @@
+﻿# docker-compose.yml
+version: '3.8'
+
+services:
+  # 🌐 Traefik
+  traefik:
+    image: traefik:v3.0
+    container_name: shortlink-traefik
+    restart: unless-stopped
+    command:
+      - "--api.dashboard=true"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--log.level=INFO"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    networks:
+      - shortlink-network
+
+  # 🚀 Sua API (usando seu Dockerfile)
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile  # ✅ Seu Dockerfile original
+    container_name: shortlink-api
+    restart: unless-stopped
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080  # ✅ Importante para Traefik
+      - ConnectionStrings__DefaultConnection=Server=db,1433;Database=ShortLinkDb;User Id=sa;Password=MinhaSenh@123;TrustServerCertificate=true;
+      - ConnectionStrings__Redis=redis:6379
+      - AppSettings__BaseUrl=http://shortlink.kora/ o
+    depends_on:
+      - db
+      - redis
+    labels:
+      # ✅ Configuração do Traefik
+      - "traefik.enable=true"
+      - "traefik.http.routers.shortlink.rule=Host(`shortlink.kora`)"
+      - "traefik.http.routers.shortlink.entrypoints=web"
+      - "traefik.http.services.shortlink.loadbalancer.server.port=8080"
+    networks:
+      - shortlink-network
+
+  # 🗄️ SQL Server
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: shortlink-db
+    restart: unless-stopped
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=MinhaSenh@123
+      - MSSQL_PID=Express
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    networks:
+      - shortlink-network
+
+  # 🔄 Redis
+  redis:
+    image: redis:alpine
+    container_name: shortlink-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - shortlink-network
+
+volumes:
+  sqlserver-data:
+  redis-data:
+
+networks:
+  shortlink-network:
+    driver: bridge
