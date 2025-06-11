@@ -1,110 +1,137 @@
-# ShortLink Architecture Diagram
+# ShortLink Architecture
 
 ## System Overview
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                           ShortLink System                               │
-└─────────────────────────────────────────────────────────────────────────┘
-
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│     Client      │    │   Load Balancer │    │     Docker      │
-│   (Browser)     │◄──►│    (Traefik)    │◄──►│   Environment   │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-                                │
-                                ▼
-                    ┌─────────────────────────┐
-                    │    ShortLink.WebAPI     │
-                    │   (ASP.NET Core API)    │
-                    └─────────────────────────┘
-                                │
-                    ┌───────────┼───────────┐
-                    ▼           ▼           ▼
-            ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
-            │Controllers  │ │ Middleware  │ │ Extensions  │
-            │- Links      │ │- Redirect   │ │- Services   │
-            │- Stats      │ │- Exception  │ │- Database   │
-            └─────────────┘ └─────────────┘ └─────────────┘
-                                │
-                                ▼
-                    ┌─────────────────────────┐
-                    │  ShortLink.Application  │
-                    │      (CQRS Layer)       │
-                    └─────────────────────────┘
-                                │
-                    ┌───────────┼───────────┐
-                    ▼           ▼           ▼
-            ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
-            │  Commands   │ │   Queries   │ │    DTOs     │
-            │- CreateLink │ │- GetByCode  │ │- LinkDto    │
-            │- Redirect   │ │- GetRecent  │ │- Settings   │
-            └─────────────┘ └─────────────┘ └─────────────┘
-                                │
-                                ▼
-                    ┌─────────────────────────┐
-                    │   ShortLink.Domain      │
-                    │   (Business Logic)      │
-                    └─────────────────────────┘
-                                │
-                    ┌───────────┼───────────┐
-                    ▼           ▼           ▼
-            ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
-            │  Entities   │ │Value Objects│ │ Interfaces  │
-            │- Link       │ │- ShortCode  │ │- Repository │
-            │             │ │             │ │- Cache      │
-            └─────────────┘ └─────────────┘ └─────────────┘
-                                │
-                                ▼
-                    ┌─────────────────────────┐
-                    │ ShortLink.Infrastructure│
-                    │   (Data & Services)     │
-                    └─────────────────────────┘
-                                │
-                    ┌───────────┼───────────┐
-                    ▼           ▼           ▼
-            ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
-            │ Repositories│ │    Cache    │ │  Services   │
-            │- Link Repo  │ │- Redis      │ │- CodeGen    │
-            │- UnitOfWork │ │- Options    │ │- External   │
-            └─────────────┘ └─────────────┘ └─────────────┘
-                                │
-                    ┌───────────┼───────────┐
-                    ▼           ▼           ▼
-            ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
-            │ SQL Server  │ │    Redis    │ │   Health    │
-            │  Database   │ │    Cache    │ │   Checks    │
-            │- Entity     │ │- Key/Value  │ │- DB Status  │
-            │  Framework  │ │- Statistics │ │- Redis      │
-            └─────────────┘ └─────────────┘ └─────────────┘
+```mermaid
+graph TB
+    Client[🌐 Client<br/>Browser/Apps] --> Traefik[⚖️ Load Balancer<br/>Traefik]
+    Traefik --> API[🚀 ShortLink.WebAPI<br/>ASP.NET Core API]
+    
+    subgraph "🎯 Presentation Layer"
+        API --> Controllers[📋 Controllers<br/>• LinksController<br/>• StatsController]
+        API --> Middleware[🔧 Middleware<br/>• RedirectMiddleware<br/>• ExceptionHandling]
+        API --> Extensions[⚙️ Extensions<br/>• Service Registration<br/>• Configuration]
+    end
+    
+    Controllers --> Application[🎪 ShortLink.Application<br/>CQRS Layer]
+    Middleware --> Application
+    
+    subgraph "🎪 Application Layer"
+        Application --> Commands[📝 Commands<br/>• CreateLinkCommand<br/>• RedirectLinkCommand]
+        Application --> Queries[🔍 Queries<br/>• GetLinkByCodeQuery<br/>• GetRecentLinksQuery]
+        Application --> DTOs[📦 DTOs<br/>• LinkDto<br/>• AppSettings]
+    end
+    
+    Commands --> Domain[💎 ShortLink.Domain<br/>Business Logic]
+    Queries --> Domain
+    
+    subgraph "💎 Domain Layer"
+        Domain --> Entities[🏛️ Entities<br/>• Link]
+        Domain --> ValueObjects[💰 Value Objects<br/>• ShortCode]
+        Domain --> Interfaces[🔌 Interfaces<br/>• ILinkRepository<br/>• ILinkCache]
+    end
+    
+    Entities --> Infrastructure[🔧 ShortLink.Infrastructure<br/>Data & Services]
+    Interfaces --> Infrastructure
+    
+    subgraph "🔧 Infrastructure Layer"
+        Infrastructure --> Repositories[🗄️ Repositories<br/>• LinkRepository<br/>• UnitOfWork]
+        Infrastructure --> Cache[⚡ Cache<br/>• RedisCacheService<br/>• RedisOptions]
+        Infrastructure --> Services[🛠️ Services<br/>• ShortCodeGenerator<br/>• External Services]
+    end
+    
+    subgraph "💾 Data Layer"
+        Repositories --> SqlServer[(🗃️ SQL Server<br/>Entity Framework)]
+        Cache --> Redis[(⚡ Redis<br/>Cache & Stats)]
+        Services --> HealthChecks[❤️ Health Checks<br/>DB + Redis Status]
+    end
+    
+    style Client fill:#e1f5fe
+    style API fill:#f3e5f5
+    style Application fill:#fff3e0
+    style Domain fill:#e8f5e8
+    style Infrastructure fill:#fce4ec
+    style SqlServer fill:#fff8e1
+    style Redis fill:#ffebee
 ```
 
-## Data Flow
+## Data Flow Diagrams
 
-### 1. Create Short Link
-```
-Client → API → CreateLinkCommand → Domain → Repository → Database
-   ↓                                           ↓
-   ↓                                        Cache
-   ↓                                           ↓
-   ← Response ← Handler ← Business Logic ← Storage
+### 1. Create Short Link Flow
+
+```mermaid
+sequenceDiagram
+    participant C as 🌐 Client
+    participant API as 🚀 WebAPI
+    participant CMD as 📝 CreateLinkCommand
+    participant H as 🎯 Handler
+    participant D as 💎 Domain
+    participant R as 🗄️ Repository
+    participant DB as 🗃️ Database
+    participant Cache as ⚡ Redis
+
+    C->>API: POST /api/links
+    API->>CMD: CreateLinkCommand
+    CMD->>H: Handle(command)
+    H->>D: Link.Create()
+    D->>R: SaveAsync()
+    R->>DB: INSERT Link
+    R->>Cache: Cache original URL
+    DB-->>R: Link saved
+    Cache-->>R: Cached
+    R-->>H: Success
+    H-->>CMD: LinkDto
+    CMD-->>API: Response
+    API-->>C: 201 Created + Short URL
 ```
 
-### 2. Redirect Short Link
-```
-Client → RedirectMiddleware → Cache (Redis) → Response
-   ↓                             ↓
-   ↓                          (if miss)
-   ↓                             ↓
-   ← Redirect ← Database ← Repository
+### 2. Redirect Short Link Flow
+
+```mermaid
+sequenceDiagram
+    participant C as 🌐 Client
+    participant M as 🔧 RedirectMiddleware  
+    participant Cache as ⚡ Redis
+    participant R as 🗄️ Repository
+    participant DB as 🗃️ Database
+
+    C->>M: GET /{shortCode}
+    M->>Cache: Get original URL
+    
+    alt Cache Hit
+        Cache-->>M: Original URL
+        M->>Cache: Increment click count
+        M-->>C: 302 Redirect
+    else Cache Miss
+        Cache-->>M: Not found
+        M->>R: GetByCodeAsync()
+        R->>DB: SELECT Link
+        DB-->>R: Link data
+        R-->>M: Link entity
+        M->>Cache: Cache URL + metadata
+        M->>Cache: Increment click count
+        M-->>C: 302 Redirect
+    end
 ```
 
-### 3. Get Statistics
-```
-Client → StatsController → Cache → Statistics
-   ↓                        ↓
-   ↓                   (aggregated)
-   ↓                        ↓
-   ← JSON Response ← Click Counts
+### 3. Get Statistics Flow
+
+```mermaid
+sequenceDiagram
+    participant C as 🌐 Client
+    participant API as 🚀 StatsController
+    participant Cache as ⚡ Redis
+    participant R as 🗄️ Repository
+    participant DB as 🗃️ Database
+
+    C->>API: GET /api/stats/{code}
+    API->>Cache: Get click count
+    Cache-->>API: Click statistics
+    API->>R: GetByCodeAsync()
+    R->>DB: SELECT Link details
+    DB-->>R: Link metadata
+    R-->>API: Link entity
+    API-->>C: Combined statistics JSON
 ```
 
 ## Key Components
