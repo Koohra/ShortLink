@@ -71,7 +71,7 @@ O projeto segue a Clean Architecture com separação clara de responsabilidades:
 - **Cache-Aside**: Performance otimizada com Redis
 - **Gateway Pattern**: Controllers como pontos de entrada unificados
 
-> **📖 Documentação Completa**: Veja `contexto.md` para análise detalhada de todos os 15+ patterns com exemplos de código
+> **📖 Documentação Completa**: Veja [`docs/CONTEXTO.md`](docs/CONTEXTO.md) para análise detalhada de todos os 15+ patterns com exemplos de código
 
 ## Configuração e Execução
 
@@ -170,7 +170,12 @@ GET /api/stats/abc123
 
 ## Desenvolvimento
 
-Para contribuir com o projeto, consulte o arquivo `CLAUDE.md` que contém informações detalhadas sobre a arquitetura e padrões utilizados.
+Para contribuir com o projeto, consulte os seguintes documentos:
+
+- [`docs/CLAUDE.md`](docs/CLAUDE.md) - Guia completo de desenvolvimento e arquitetura
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) - Diagramas e visão geral da arquitetura
+- [`docs/CONTEXTO.md`](docs/CONTEXTO.md) - Análise detalhada dos design patterns implementados
+- [`docs/REFACTORING-ROADMAP.md`](docs/REFACTORING-ROADMAP.md) - Roadmap de melhorias e refatorações
 
 ## Licença
 
